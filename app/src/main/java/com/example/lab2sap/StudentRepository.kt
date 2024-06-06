@@ -1,4 +1,4 @@
-package com.example.lab2sap.viewmodel
+package com.example.lab2sap
 
 import android.content.Context
 import androidx.lifecycle.LiveData
@@ -24,6 +24,16 @@ class StudentRepository private constructor(context: Context)
     fun insertStudent(student:Student){
         executor.execute {
             studentDao.insertStudent(student)
+        }
+    }
+    fun updateStudent(student: Student){
+        executor.execute{
+            studentDao.updateStudent(student)
+        }
+    }
+    fun deleteStudent(student: Student){
+        executor.execute{
+            studentDao.deleteStudent(student)
         }
     }
     companion object {

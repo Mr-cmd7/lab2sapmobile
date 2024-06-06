@@ -1,27 +1,42 @@
 package com.example.lab2sap.view
 
+
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.lab2sap.R
 import com.example.lab2sap.databinding.FragmentStudentListBinding
+import com.example.lab2sap.model.Student
+import com.example.lab2sap.viewmodel.StudentListViewModel
+import com.example.lab2sap.viewmodel.StudentViewModel
+import java.util.UUID
 
 private const val TAG="StudentListFragment"
+private const val DIALOG="StudentDialog"
 
-class StudentListFragment: Fragment(R.layout.fragment_student_list) {
+class StudentListFragment:Fragment(R.layout.fragment_student_list) {
+    interface Callbacks{
+        fun onStudentSelected(studentId: UUID)
+    }
+    private var callbacks:Callbacks?=null
     private lateinit var binding: FragmentStudentListBinding
     private var adapter: StudentAdapter?=StudentAdapter(emptyList())
     private val studentListViewModel:StudentListViewModel by lazy {
         ViewModelProvider(this)[StudentListViewModel::class.java]
     }
-
+    private val studentViewModel: StudentViewModel by lazy {
+        ViewModelProvider(this).get(StudentViewModel::class.java)
+    }
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -29,15 +44,46 @@ class StudentListFragment: Fragment(R.layout.fragment_student_list) {
     ): View? {
         binding=FragmentStudentListBinding.inflate(layoutInflater,
             container,false)
-        binding.studentRecyclerView.layoutManager= LinearLayoutManager(context)
-        //  studentListViewModel.Load()
+        binding.studentRecyclerView.layoutManager=LinearLayoutManager(context)
+        //binding.studentRecyclerView.layoutManager=GridLayoutManager(context,2)
         studentListViewModel.studentListLiveData.observe(viewLifecycleOwner,
             Observer { students->
                 adapter=StudentAdapter(students)
                 binding.studentRecyclerView.adapter=adapter
-            })
+                ItemTouchHelper(object: ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT)
+                {
+                    override fun onMove(
+                        recyclerView: RecyclerView,
+                        viewHolder: RecyclerView.ViewHolder,
+                        target: RecyclerView.ViewHolder
+                    ): Boolean {
+                        TODO("Not yet implemented")
+                    }
 
+                    override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                        val deleteStudent= students[viewHolder.adapterPosition]
+                        Log.d("delete",deleteStudent.lastName)
+                        studentViewModel.deleteStudent(deleteStudent)
+                        adapter!!.notifyItemRemoved(viewHolder.adapterPosition)
+                    }
+                }).attachToRecyclerView(binding.studentRecyclerView)
+            })
+        binding.idAdd.setOnClickListener{
+            StudentDialogFragment().apply {
+                show(this@StudentListFragment.parentFragmentManager, DIALOG)
+            }
+        }
         return binding.root
+    }
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        callbacks=context as Callbacks?
+    }
+
+    override fun onDetach() {
+        super.onDetach()
+        callbacks=null
     }
 
     private inner class StudentAdapter(var students:List<Student>):
@@ -51,31 +97,26 @@ class StudentListFragment: Fragment(R.layout.fragment_student_list) {
 
         override fun onBindViewHolder(holder: StudentHolder, position: Int) {
             val student=students[position]
-//            holder.apply {
-//                studentNameTextView.text=student.name
-//                studentGroupTextView.text=student.group
-//                studentYear.text=student.birthYear.toString()
-//            }
             holder.bind(student)
         }
-        private inner class StudentHolder(view: View): RecyclerView.ViewHolder(view),
+        private inner class StudentHolder(view:View):RecyclerView.ViewHolder(view),
             View.OnClickListener{
             private lateinit var student:Student
-            val studentNameTextView: TextView =itemView.findViewById(R.id.student_name)
-            val studentGroupTextView: TextView =itemView.findViewById(R.id.student_group)
-            val studentYear: TextView =itemView.findViewById(R.id.student_year)
+            val studentNameTextView:TextView=itemView.findViewById(R.id.student_name)
+            val studentGroupTextView:TextView=itemView.findViewById(R.id.student_group)
+            val studentYear:TextView=itemView.findViewById(R.id.student_year)
             init {
                 itemView.setOnClickListener(this)
             }
             fun bind(student: Student){
                 this.student=student
-                studentNameTextView.text=student.name
+                studentNameTextView.text=student.lastName
                 studentGroupTextView.text=student.group
-                studentYear.text=student.birthYear.toString()
+                studentYear.text=student.year.toString()
             }
 
             override fun onClick(v: View?) {
-                Toast.makeText(context,student.name, Toast.LENGTH_SHORT).show()
+                callbacks?.onStudentSelected(student.id)
             }
         }
 

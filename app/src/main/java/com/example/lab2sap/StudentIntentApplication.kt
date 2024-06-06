@@ -1,7 +1,6 @@
-package com.example.lab2sap.viewmodel
+package com.example.lab2sap
 
 import android.app.Application
-import com.example.lab2sap.database.StudentRepository
 
 class StudentIntentApplication: Application() {
     override fun onCreate() {
